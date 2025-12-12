@@ -1,36 +1,15 @@
-
+// src/ImageModal.js
 import React from "react";
+import "./ImageModal.css";
 
-export default function ImageModal({ src, onClose }) {
+export default function ImageModal({src, onClose}){
+  if(!src) return null;
   return (
-    <div
-      style={{
-        position: "fixed",
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0,0,0,0.7)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backdropFilter: "blur(4px)",
-        zIndex: 9999,
-        padding: "20px"
-      }}
-      onClick={onClose}
-    >
-      <img
-        src={src}
-        alt="preview"
-        style={{
-          maxWidth: "90%",
-          maxHeight: "90%",
-          borderRadius: "16px",
-          boxShadow: "0 0 25px rgba(0,0,0,0.4)"
-        }}
-        onClick={(e) => e.stopPropagation()}
-      />
+    <div className="imgmodal-backdrop" onClick={onClose}>
+      <div className="imgmodal-card" onClick={e=>e.stopPropagation()}>
+        <button className="imgmodal-close" onClick={onClose}>✕</button>
+        <img src={src} alt="preview" onError={(e)=> e.currentTarget.classList.add("img-error")} />
+      </div>
     </div>
   );
 }
