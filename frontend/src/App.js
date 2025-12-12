@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 import ImageModal from "./ImageModal";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000/api/chat";
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL ;
+const API_BASE = process.env.REACT_APP_API_BASE ;
 
 function App(){
   const [itinerary, setItinerary] = useState("");
