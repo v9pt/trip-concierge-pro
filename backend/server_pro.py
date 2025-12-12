@@ -29,29 +29,22 @@ if not OPENROUTER_API_KEY:
     raise Exception("OPENROUTER_API_KEY missing in environment (.env)")
 
 # ---------------------
-# MONGO (safe)
+# MONGO (Railway safe)
 # ---------------------
-mongo_client: Optional[MongoClient] = None
+mongo_client = None
 db = None
 
 if MONGO_URL:
     try:
-        # NOTE: tlsAllowInvalidCertificates=True is provided to avoid
-        # TLS issues that sometimes surface in limited container envs.
-        # Remove in production if you have valid CA chain.
         mongo_client = MongoClient(
             MONGO_URL,
-            tls=True,
-            tlsAllowInvalidCertificates=True,
-            serverSelectionTimeoutMS=10000,
+            serverSelectionTimeoutMS=15000,
         )
-        # Explicit DB name instead of relying on get_default_database()
-        db = mongo_client["trip_concierge"]
-        # try ping (non-blocking enough)
+        db = mongo_client.get_database("trip_concierge")
         mongo_client.admin.command("ping")
-        log.info("✅ MongoDB connected")
+        log.info("✅ MongoDB connected (Railway)")
     except Exception as e:
-        log.exception("❌ MongoDB connection failed (DB disabled): %s", e)
+        log.error("❌ MongoDB disabled: %s", e)
         db = None
 else:
     log.warning("⚠️ No MONGO_URL provided — DB disabled.")
