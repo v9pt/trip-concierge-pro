@@ -23,7 +23,7 @@ if not OPENROUTER_API_KEY:
     raise Exception("OPENROUTER_API_KEY missing in environment")
 
 # ==========================
-# MONGO CONNECTION (SAFE MODE)
+# MONGO CONNECTION (FINAL WORKING)
 # ==========================
 
 mongo_client = None
@@ -31,28 +31,25 @@ db = None
 
 if MONGO_URL:
     try:
-        # Railway often breaks TLS to MongoDB Atlas — MUST allow invalid certs
         mongo_client = MongoClient(
             MONGO_URL,
             tls=True,
             tlsAllowInvalidCertificates=True,
-            serverSelectionTimeoutMS=5000
+            serverSelectionTimeoutMS=8000
         )
 
-        # Attempt a safe check without forcing TLS validation
-        try:
-            mongo_client.list_database_names()
-            print("✅ MongoDB connected successfully")
-            db = mongo_client["trip_concierge"]
-        except Exception as inner_err:
-            print(f"⚠️ MongoDB unreachable — running without DB: {inner_err}")
-            db = None
+        # Test the connection safely
+        mongo_client.admin.command("ping")
+        print("✅ MongoDB Connected!")
+
+        db = mongo_client.get_database("trip_concierge")
 
     except Exception as e:
-        print(f"❌ Mongo connection failed: {e}")
+        print(f"⚠️ MongoDB unreachable — continuing without DB: {e}")
         db = None
 else:
     print("⚠️ No MONGO_URL provided — DB disabled.")
+
 
 
 # ==========================
