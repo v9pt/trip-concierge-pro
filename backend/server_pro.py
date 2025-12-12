@@ -2,6 +2,7 @@ import os
 import re
 import requests
 import random
+import ssl
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -43,7 +44,9 @@ if MONGO_URL:
         mongo_client.admin.command("ping")
         print("✅ MongoDB CONNECTED")
 
-        db = mongo_client["trip_concierge"]
+        # Extract database name from URI
+        db_name = MONGO_URL.split("/")[-1].split("?")[0]
+        db = mongo_client[db_name]
 
     except Exception as e:
         print(f"❌ MongoDB unreachable — running without DB: {e}")
