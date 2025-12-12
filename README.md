@@ -7,7 +7,7 @@ TravelConcierge is an intelligent travel assistant that uses OpenAI's GPT to ans
 
 ## Features
 - 📝 Add and manage multiple travel itineraries
-- 🤖 AI-powered Q&A using OpenAI GPT
+- 🤖 AI-powered Q&A using LLMs
 - 💬 Interactive chat interface
 - 🎨 Modern, professional UI with gradient design
 - 📱 Responsive design for all devices
@@ -16,13 +16,14 @@ TravelConcierge is an intelligent travel assistant that uses OpenAI's GPT to ans
 - **Backend**: FastAPI (Python)
 - **Frontend**: React with Tailwind CSS
 - **Database**: MongoDB
-- **AI**: OpenAI GPT-3.5 Turbo
+- **AI**: OpenAI GPT-5.1 Turbo
 
 ## Setup
 The application is already configured and running with:
-- Backend on port 8001
+- Backend on port 8080
 - Frontend on port 3000
 - MongoDB running locally
+everything is deployed on vercel (https://trip-concierge-pro.vercel.app/)
 
 ## Usage
 1. Access the application through your browser
