@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "framework": "create-react-app",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://trip-concierge-pro-production.up.railway.app/api/chat",
+    "REACT_APP_API_BASE": "https://trip-concierge-pro-production.up.railway.app"
+  }
+}
