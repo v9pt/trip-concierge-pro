@@ -24,36 +24,33 @@ if not OPENROUTER_API_KEY:
     raise Exception("OPENROUTER_API_KEY missing in environment")
 
 # ==========================
+
+
 mongo_client = None
 db = None
 
 if MONGO_URL:
     try:
-        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
-
         mongo_client = MongoClient(
             MONGO_URL,
             tls=True,
-            tlsAllowInvalidCertificates=True,
-            ssl_context=ssl_ctx,
+            tlsAllowInvalidCertificates=True,   # required on Railway
             serverSelectionTimeoutMS=8000
         )
 
         mongo_client.admin.command("ping")
         print("✅ MongoDB CONNECTED")
 
-        # Extract database name from URI
+        # Extract db name from URI (ex: .../trip_concierge?... )
         db_name = MONGO_URL.split("/")[-1].split("?")[0]
         db = mongo_client[db_name]
 
     except Exception as e:
         print(f"❌ MongoDB unreachable — running without DB: {e}")
         db = None
+
 else:
     print("⚠️ MONGO_URL missing — database disabled.")
-
 
 
 # ==========================
