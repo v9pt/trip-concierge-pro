@@ -35,3 +35,5 @@ everything is deployed on vercel (https://trip-concierge-pro.vercel.app/)
 To use the AI features, you need a valid OpenAI API key configured in `/app/backend/.env`
 # trip-concierge-pro
 # trip-concierge-pro
+<img width="1426" height="712" alt="image" src="https://github.com/user-attachments/assets/e60a77d2-40b4-4ff9-bc46-26c7d6cf8abe" />
+
