@@ -1,3 +1,3 @@
 #!/bin/bash
-pip install -r requirements.txt
-uvicorn server_pro:app --host 0.0.0.0 --port $PORT
+echo "Starting Trip Concierge Pro Backend..."
+python3 -m uvicorn server_pro:app --host 0.0.0.0 --port ${PORT:-8080}
