@@ -1,8 +1,7 @@
 import os
 import re
-import random
-import logging
 import requests
+import random
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -10,84 +9,96 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 load_dotenv()
-log = logging.getLogger("trip-concierge-pro")
-logging.basicConfig(level=logging.INFO)
 
-# ==============================
+# ==========================
 # CONFIG
-# ==============================
+# ==========================
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MONGO_URL = os.getenv("MONGO_URL")  # MUST include /trip_concierge + ?tls=true or ?ssl=true
+MONGO_URL = os.getenv("MONGO_URL")  # Must include full Mongo URI with DB name
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
 if not OPENROUTER_API_KEY:
     raise Exception("OPENROUTER_API_KEY missing in environment")
 
-
-# ==============================
-# MONGO (RAILWAY-PROOF)
-# ==============================
+# ==========================
+# MONGO CONNECTION (SAFE MODE)
+# ==========================
 
 mongo_client = None
 db = None
 
 if MONGO_URL:
     try:
+        # Railway often breaks TLS to MongoDB Atlas — MUST allow invalid certs
         mongo_client = MongoClient(
             MONGO_URL,
-            serverSelectionTimeoutMS=15000
+            tls=True,
+            tlsAllowInvalidCertificates=True,
+            serverSelectionTimeoutMS=5000
         )
-        mongo_client.admin.command("ping")   # TEST CONNECTION
-        db = mongo_client.get_database("trip_concierge")
-        log.info("✅ MongoDB connected successfully.")
+
+        # Attempt a safe check without forcing TLS validation
+        try:
+            mongo_client.list_database_names()
+            print("✅ MongoDB connected successfully")
+            db = mongo_client["trip_concierge"]
+        except Exception as inner_err:
+            print(f"⚠️ MongoDB unreachable — running without DB: {inner_err}")
+            db = None
+
     except Exception as e:
-        log.error("❌ MongoDB connection failed (DB will be disabled): %s", e)
+        print(f"❌ Mongo connection failed: {e}")
         db = None
 else:
-    log.warning("⚠️ MONGO_URL not provided. Database disabled.")
+    print("⚠️ No MONGO_URL provided — DB disabled.")
 
 
-# ==============================
+# ==========================
 # HELPERS
-# ==============================
+# ==========================
 
 def extract_markdown_images(text):
+    """Find markdown images: ![](url)"""
     return re.findall(r'!\[.*?\]\((.*?)\)', text)
 
 
 def clean_markdown_images(text):
-    return re.sub(r'!\[.*?\]\(.*?\)', "", text).strip()
+    """Strip markdown images from answer text"""
+    return re.sub(r'!\[.*?\]\(.*?\)', '', text).strip()
 
 
 def get_unsplash_image(place):
-    sig = random.randint(1, 9999999)
+    sig = random.randint(1, 9_999_999)
     return f"https://source.unsplash.com/900x600/?{place.replace(' ', '%20')}&sig={sig}"
 
 
 def extract_places(text):
     raw = re.findall(r'\b([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})\b', text)
-    blacklist = {"Summary", "Options", "Day", "Plan", "You", "Your", "Trip", "Best", "Morning", "Evening"}
-    places = [p for p in raw if p not in blacklist]
+    blacklist = {
+        "Summary","Options","Best","Quick","Here","Morning","Evening",
+        "Night","Cost","Who","Ideal","Plan","Day","You","Your","Trip"
+    }
+    places = [p for p in raw if p not in blacklist and len(p) > 2]
     return list(dict.fromkeys(places))[:6]
 
 
 SYSTEM_PROMPT = """
-You are Trip Concierge Pro — friendly and concise.
-Every answer must include:
-• A short summary
-• 3 strong options with timing, cost & who will enjoy it
-• Add image tags like: ![](https://...)
-• Ask one follow-up question
+You are Trip Concierge Pro — friendly, helpful, concise.
+Include:
+- A short summary
+- 3 strong options with timing + cost
+- Add image tags like: ![](https://...)
+- Include one follow-up question
 """
 
 DEFAULT_ITINERARY = "No itinerary uploaded yet."
 
 
-# ==============================
-# FASTAPI
-# ==============================
+# ==========================
+# FASTAPI APP
+# ==========================
 
 app = FastAPI()
 
@@ -99,42 +110,39 @@ app.add_middleware(
 )
 
 
-# ==============================
+# ==========================
 # CHAT ENDPOINT
-# ==============================
+# ==========================
 
 @app.post("/api/chat")
 async def chat(request: Request):
     body = await request.json()
+
     question = body.get("question")
     history = body.get("history", [])
     itinerary = body.get("itinerary_content", DEFAULT_ITINERARY)
 
     if not question:
-        raise HTTPException(status_code=400, detail="Question missing")
+        raise HTTPException(400, "Missing question")
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT + "\n\n--- USER ITINERARY ---\n" + itinerary}
-    ]
-
-    for m in history:
-        messages.append({"role": m["role"], "content": m["content"]})
-
+    messages = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n--- USER ITINERARY ---\n" + itinerary}]
+    messages += [{"role": msg["role"], "content": msg["content"]} for msg in history]
     messages.append({"role": "user", "content": question})
 
     payload = {"model": "openrouter/auto", "messages": messages}
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
 
     try:
-        r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=25)
+        r = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=30)
     except Exception as e:
         return {"answer": f"⚠️ Network error: {e}", "images": []}
 
     if r.status_code != 200:
-        return {"answer": f"⚠️ Model error {r.status_code}: {r.text}", "images": []}
+        return {"answer": f"⚠️ API error {r.status_code}: {r.text}", "images": []}
 
     data = r.json()
     raw = data["choices"][0]["message"]["content"]
@@ -152,14 +160,14 @@ async def chat(request: Request):
     }
 
 
-# ==============================
-# TRIP CRUD
-# ==============================
+# ==========================
+# SAVE TRIP
+# ==========================
 
 @app.post("/api/trips")
 async def save_trip(request: Request):
     if db is None:
-        raise HTTPException(status_code=500, detail="Database unavailable")
+        return {"error": "DB disabled on this deployment"}
 
     body = await request.json()
     doc = {
@@ -172,22 +180,30 @@ async def save_trip(request: Request):
     return {"id": str(res.inserted_id)}
 
 
+# ==========================
+# GET TRIP
+# ==========================
+
 @app.get("/api/trips/{trip_id}")
 async def get_trip(trip_id: str):
     if db is None:
-        raise HTTPException(status_code=500, detail="Database unavailable")
+        return {"error": "DB disabled"}
 
     try:
         doc = db.trips.find_one({"_id": ObjectId(trip_id)})
     except:
-        raise HTTPException(status_code=400, detail="Invalid ID")
+        raise HTTPException(400, "Invalid ID")
 
     if not doc:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(404, "Not found")
 
     doc["_id"] = str(doc["_id"])
     return doc
 
+
+# ==========================
+# LIST TRIPS
+# ==========================
 
 @app.get("/api/trips")
 async def list_trips():
@@ -196,24 +212,25 @@ async def list_trips():
 
     try:
         docs = db.trips.find().sort("name", 1)
-        trips = [{"id": str(d["_id"]), "name": d["name"], "metadata": d.get("metadata", {})} for d in docs]
+        trips = [{"id": str(d["_id"]), "name": d["name"]} for d in docs]
         return {"trips": trips}
     except Exception as e:
-        return {"trips": [], "error": str(e)}
+        return {"error": str(e), "trips": []}
 
 
-# ==============================
+# ==========================
 # WEATHER
-# ==============================
+# ==========================
 
 @app.get("/api/weather")
-async def get_weather(lat: float, lon: float):
+async def weather(lat: float, lon: float):
     params = {
         "latitude": lat,
         "longitude": lon,
         "hourly": "temperature_2m,weathercode",
-        "timezone": "auto",
+        "timezone": "auto"
     }
+
     try:
         r = requests.get(OPEN_METEO_URL, params=params, timeout=10)
         return r.json()
@@ -221,20 +238,22 @@ async def get_weather(lat: float, lon: float):
         return {"error": str(e)}
 
 
-# ==============================
+# ==========================
 # SUMMARY
-# ==============================
+# ==========================
 
 @app.post("/api/summary")
 async def summary(request: Request):
     body = await request.json()
     itinerary = body.get("itinerary", DEFAULT_ITINERARY)
 
+    prompt = f"Summarize this in 5 lines:\n\n{itinerary}"
+
     payload = {
         "model": "openrouter/auto",
         "messages": [
             {"role": "system", "content": "You summarize clearly and concisely."},
-            {"role": "user", "content": f"Summarize this itinerary in 5 lines:\n\n{itinerary}"}
+            {"role": "user", "content": prompt}
         ]
     }
 
