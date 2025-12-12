@@ -23,33 +23,38 @@ if not OPENROUTER_API_KEY:
     raise Exception("OPENROUTER_API_KEY missing in environment")
 
 # ==========================
-# MONGO CONNECTION (FINAL WORKING)
-# ==========================
+from pymongo.mongo_client import MongoClient
+import ssl
 
 mongo_client = None
 db = None
 
 if MONGO_URL:
     try:
+        # Force TLSv1.2 handshake (Atlas accepts this, Railway supports it)
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+
         mongo_client = MongoClient(
             MONGO_URL,
             tls=True,
             tlsAllowInvalidCertificates=True,
+            ssl=ssl_ctx,
+            socketTimeoutMS=20000,
+            connectTimeoutMS=20000,
             serverSelectionTimeoutMS=8000
         )
 
-        # Test the connection safely
         mongo_client.admin.command("ping")
-        print("✅ MongoDB Connected!")
-
-        db = mongo_client.get_database("trip_concierge")
+        print("✅ MongoDB CONNECTED — TLSv1.2 FORCED")
+        db = mongo_client["trip_concierge"]
 
     except Exception as e:
-        print(f"⚠️ MongoDB unreachable — continuing without DB: {e}")
+        print(f"❌ MongoDB unreachable — running without DB: {e}")
         db = None
 else:
-    print("⚠️ No MONGO_URL provided — DB disabled.")
-
+    print("⚠️ MONGO_URL missing — DB disabled")
 
 
 # ==========================
