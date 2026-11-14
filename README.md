@@ -3,7 +3,8 @@
 AI-Powered Travel Itinerary Assistant
 
 ## Overview
-TravelConcierge is an intelligent travel assistant that uses OpenAI's GPT to answer questions about travel itineraries. Users can upload their travel plans and get instant, accurate answers to any questions about their trip.
+
+TravelConcierge is an intelligent travel assistant that uses OpenAI's GPT to answer questions about travel itineraries. Users can upload their travel plans and get instant answers about their trip.
 
 ## Features
 - 📝 Add and manage multiple travel itineraries
@@ -19,11 +20,13 @@ TravelConcierge is an intelligent travel assistant that uses OpenAI's GPT to ans
 - **AI**: OpenAI GPT-5.1 Turbo
 
 ## Setup
-The application is already configured and running with:
+
+The application is configured to run with:
 - Backend on port 8080
 - Frontend on port 3000
 - MongoDB running locally
-everything is deployed on vercel (https://trip-concierge-pro.vercel.app/)
+
+The production deployment is available at [trip-concierge-pro.vercel.app](https://trip-concierge-pro.vercel.app/).
 
 ## Usage
 1. Access the application through your browser
@@ -31,9 +34,9 @@ everything is deployed on vercel (https://trip-concierge-pro.vercel.app/)
 3. Select an itinerary to ask questions about
 4. Chat with the AI assistant about your travel plans
 
-## Note
-To use the AI features, you need a valid OpenAI API key configured in `/app/backend/.env`
-# trip-concierge-pro
-# trip-concierge-pro
+## Configuration
+
+Copy the backend environment template, if present, and set a valid `OPENAI_API_KEY` in the backend's local `.env` file before using AI features.
+
 <img width="1426" height="712" alt="image" src="https://github.com/user-attachments/assets/e60a77d2-40b4-4ff9-bc46-26c7d6cf8abe" />
 
